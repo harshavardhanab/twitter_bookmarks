@@ -1,0 +1,265 @@
+{
+ "data": {
+  "bookmark_timeline_v2": {
+   "timeline": {
+    "instructions": [
+     {
+      "type": "TimelineAddEntries",
+      "entries": [
+       {
+        "entryId": "tweet-1800000000000000003",
+        "sortIndex": "1858000000000000003",
+        "content": {
+         "entryType": "TimelineTimelineItem",
+         "itemContent": {
+          "itemType": "TimelineTweet",
+          "tweet_results": {
+           "result": {
+            "__typename": "Tweet",
+            "rest_id": "1800000000000000003",
+            "core": {
+             "user_results": {
+              "result": {
+               "__typename": "User",
+               "rest_id": "1",
+               "core": {
+                "screen_name": "dana",
+                "name": "Dana D"
+               }
+              }
+             }
+            },
+            "article": {
+             "article_results": {
+              "result": {
+               "title": "Notes on local-first software",
+               "preview_text": "Why your data should live on your machine."
+              }
+             }
+            },
+            "legacy": {
+             "full_text": "https://t.co/art",
+             "created_at": "Fri Nov 01 09:30:00 +0000 2024",
+             "entities": {
+              "urls": [
+               {
+                "url": "https://t.co/art",
+                "expanded_url": "https://x.com/i/article/123"
+               }
+              ]
+             }
+            }
+           }
+          }
+         }
+        }
+       },
+       {
+        "entryId": "tweet-1800000000000000002",
+        "sortIndex": "1858000000000000002",
+        "content": {
+         "entryType": "TimelineTimelineItem",
+         "itemContent": {
+          "itemType": "TimelineTweet",
+          "tweet_results": {
+           "result": {
+            "__typename": "TweetWithVisibilityResults",
+            "tweet": {
+             "__typename": "Tweet",
+             "rest_id": "1800000000000000002",
+             "core": {
+              "user_results": {
+               "result": {
+                "__typename": "User",
+                "rest_id": "1",
+                "core": {
+                 "screen_name": "bob",
+                 "name": "Bob B"
+                }
+               }
+              }
+             },
+             "note_tweet": {
+              "note_tweet_results": {
+               "result": {
+                "text": "A long note tweet about hybrid retrieval: BM25 plus embeddings, fused with reciprocal rank fusion. Video below. https://t.co/n1",
+                "entity_set": {
+                 "urls": [
+                  {
+                   "url": "https://t.co/n1",
+                   "expanded_url": "https://example.com/rrf-paper.pdf"
+                  }
+                 ]
+                }
+               }
+              }
+             },
+             "quoted_status_result": {
+              "result": {
+               "__typename": "Tweet",
+               "rest_id": "1700000000000000009",
+               "core": {
+                "user_results": {
+                 "result": {
+                  "__typename": "User",
+                  "rest_id": "1",
+                  "core": {
+                   "screen_name": "carol",
+                   "name": "Carol C"
+                  }
+                 }
+                }
+               },
+               "legacy": {
+                "full_text": "Vector search in SQLite with sqlite-vec https://t.co/q1",
+                "created_at": "Mon Jan 01 00:00:00 +0000 2024",
+                "entities": {
+                 "urls": [
+                  {
+                   "url": "https://t.co/q1",
+                   "expanded_url": "https://github.com/asg017/sqlite-vec"
+                  }
+                 ]
+                }
+               }
+              }
+             },
+             "legacy": {
+              "full_text": "A long note tweet about hybrid retrieval: BM25 plus\u2026 https://t.co/vid",
+              "created_at": "Tue Mar 05 14:00:00 +0000 2024",
+              "entities": {
+               "urls": [],
+               "media": [
+                {
+                 "url": "https://t.co/vid"
+                }
+               ]
+              },
+              "extended_entities": {
+               "media": [
+                {
+                 "url": "https://t.co/vid",
+                 "type": "video",
+                 "media_url_https": "https://pbs.twimg.com/thumb.jpg",
+                 "video_info": {
+                  "variants": [
+                   {
+                    "content_type": "application/x-mpegURL",
+                    "url": "https://video.twimg.com/a.m3u8"
+                   },
+                   {
+                    "content_type": "video/mp4",
+                    "bitrate": 256000,
+                    "url": "https://video.twimg.com/low.mp4"
+                   },
+                   {
+                    "content_type": "video/mp4",
+                    "bitrate": 2176000,
+                    "url": "https://video.twimg.com/high.mp4"
+                   }
+                  ]
+                 }
+                }
+               ]
+              }
+             }
+            }
+           }
+          }
+         }
+        }
+       },
+       {
+        "entryId": "tweet-1800000000000000001",
+        "sortIndex": "1858000000000000001",
+        "content": {
+         "entryType": "TimelineTimelineItem",
+         "itemContent": {
+          "itemType": "TimelineTweet",
+          "tweet_results": {
+           "result": {
+            "__typename": "Tweet",
+            "rest_id": "1800000000000000001",
+            "core": {
+             "user_results": {
+              "result": {
+               "__typename": "User",
+               "rest_id": "1",
+               "legacy": {
+                "screen_name": "alice",
+                "name": "Alice A"
+               }
+              }
+             }
+            },
+            "views": {
+             "count": "12345"
+            },
+            "legacy": {
+             "full_text": "Great write-up on SQLite FTS5 &amp; ranking https://t.co/abc123 https://t.co/media1",
+             "created_at": "Wed Oct 10 20:19:24 +0000 2018",
+             "conversation_id_str": "1800000000000000001",
+             "favorite_count": 10,
+             "retweet_count": 2,
+             "reply_count": 1,
+             "quote_count": 0,
+             "bookmark_count": 5,
+             "entities": {
+              "urls": [
+               {
+                "url": "https://t.co/abc123",
+                "expanded_url": "https://sqlite.org/fts5.html"
+               }
+              ],
+              "media": [
+               {
+                "url": "https://t.co/media1"
+               }
+              ]
+             },
+             "extended_entities": {
+              "media": [
+               {
+                "url": "https://t.co/media1",
+                "type": "photo",
+                "media_url_https": "https://pbs.twimg.com/media/p1.jpg"
+               }
+              ]
+             }
+            }
+           }
+          }
+         }
+        }
+       },
+       {
+        "entryId": "tweet-4",
+        "sortIndex": "1858000000000000000",
+        "content": {
+         "entryType": "TimelineTimelineItem",
+         "itemContent": {
+          "itemType": "TimelineTweet",
+          "tweet_results": {
+           "result": {
+            "__typename": "TweetTombstone",
+            "tombstone": {}
+           }
+          }
+         }
+        }
+       },
+       {
+        "entryId": "cursor-bottom-1857",
+        "sortIndex": "1857",
+        "content": {
+         "cursorType": "Bottom",
+         "value": "DAAA"
+        }
+       }
+      ]
+     }
+    ]
+   }
+  }
+ }
+}

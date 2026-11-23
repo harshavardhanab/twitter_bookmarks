@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Daily bookmarks sync. Rendered and installed by scripts/install-launchd.sh,
+  which fills in the wrapper script path, the log directory and the time of day.
+  If the Mac is asleep at that time, launchd runs it on wake.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>local.bm.sync</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>__WRAPPER__</string>
+  </array>
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>__HOUR__</integer>
+    <key>Minute</key>
+    <integer>__MINUTE__</integer>
+  </dict>
+  <key>RunAtLoad</key>
+  <false/>
+  <key>ProcessType</key>
+  <string>Background</string>
+  <key>LowPriorityIO</key>
+  <true/>
+  <!-- Only output from the wrapper itself; sync logs go to sync-YYYY-MM-DD.log -->
+  <key>StandardOutPath</key>
+  <string>__LOGDIR__/launchd.log</string>
+  <key>StandardErrorPath</key>
+  <string>__LOGDIR__/launchd.log</string>
+</dict>
+</plist>

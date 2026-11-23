@@ -1,0 +1,134 @@
+{
+ "data": {
+  "user": {
+   "result": {
+    "__typename": "User",
+    "timeline": {
+     "timeline": {
+      "instructions": [
+       {
+        "type": "TimelineClearCache"
+       },
+       {
+        "type": "TimelineAddEntries",
+        "entries": [
+         {
+          "entryId": "tweet-1900000000000000007",
+          "sortIndex": "1999000000000000002",
+          "content": {
+           "entryType": "TimelineTimelineItem",
+           "itemContent": {
+            "itemType": "TimelineTweet",
+            "tweet_results": {
+             "result": {
+              "__typename": "Tweet",
+              "rest_id": "1900000000000000007",
+              "core": {
+               "user_results": {
+                "result": {
+                 "__typename": "User",
+                 "core": {
+                  "screen_name": "frank",
+                  "name": "Frank F"
+                 }
+                }
+               }
+              },
+              "legacy": {
+               "full_text": "Tiny gardens on balconies: tomatoes need six hours of sun https://t.co/g1",
+               "created_at": "Sat Jun 07 10:00:00 +0000 2025",
+               "favorite_count": 42,
+               "entities": {
+                "urls": [
+                 {
+                  "url": "https://t.co/g1",
+                  "expanded_url": "https://example.org/balcony-gardens"
+                 }
+                ]
+               }
+              }
+             }
+            }
+           }
+          }
+         },
+         {
+          "entryId": "tweet-1800000000000000001",
+          "sortIndex": "1999000000000000001",
+          "content": {
+           "entryType": "TimelineTimelineItem",
+           "itemContent": {
+            "itemType": "TimelineTweet",
+            "tweet_results": {
+             "result": {
+              "__typename": "Tweet",
+              "rest_id": "1800000000000000001",
+              "core": {
+               "user_results": {
+                "result": {
+                 "__typename": "User",
+                 "rest_id": "1",
+                 "legacy": {
+                  "screen_name": "alice",
+                  "name": "Alice A"
+                 }
+                }
+               }
+              },
+              "views": {
+               "count": "12345"
+              },
+              "legacy": {
+               "full_text": "Great write-up on SQLite FTS5 &amp; ranking https://t.co/abc123 https://t.co/media1",
+               "created_at": "Wed Oct 10 20:19:24 +0000 2018",
+               "conversation_id_str": "1800000000000000001",
+               "favorite_count": 10,
+               "retweet_count": 2,
+               "reply_count": 1,
+               "quote_count": 0,
+               "bookmark_count": 5,
+               "entities": {
+                "urls": [
+                 {
+                  "url": "https://t.co/abc123",
+                  "expanded_url": "https://sqlite.org/fts5.html"
+                 }
+                ],
+                "media": [
+                 {
+                  "url": "https://t.co/media1"
+                 }
+                ]
+               },
+               "extended_entities": {
+                "media": [
+                 {
+                  "url": "https://t.co/media1",
+                  "type": "photo",
+                  "media_url_https": "https://pbs.twimg.com/media/p1.jpg"
+                 }
+                ]
+               }
+              }
+             }
+            }
+           }
+          }
+         },
+         {
+          "entryId": "cursor-bottom-0",
+          "sortIndex": "1998",
+          "content": {
+           "cursorType": "Bottom",
+           "value": "X"
+          }
+         }
+        ]
+       }
+      ]
+     }
+    }
+   }
+  }
+ }
+}

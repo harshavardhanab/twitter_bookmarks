@@ -1,0 +1,107 @@
+{
+ "tweet_id": "1700000000000000042",
+ "captured_at": "2026-11-23T06:01:00+00:00",
+ "responses": [
+  {
+   "data": {
+    "threaded_conversation_with_injections_v2": {
+     "instructions": [
+      {
+       "type": "TimelineAddEntries",
+       "entries": [
+        {
+         "entryId": "tweet-1700000000000000042",
+         "sortIndex": "9",
+         "content": {
+          "entryType": "TimelineTimelineItem",
+          "itemContent": {
+           "itemType": "TimelineTweet",
+           "tweet_results": {
+            "result": {
+             "__typename": "Tweet",
+             "rest_id": "1700000000000000042",
+             "core": {
+              "user_results": {
+               "result": {
+                "__typename": "User",
+                "core": {
+                 "screen_name": "zara",
+                 "name": "Zara"
+                }
+               }
+              }
+             },
+             "legacy": {
+              "full_text": "Old bookmark about zettelkasten notes &amp; links https://t.co/z1",
+              "created_at": "Fri Nov 12 08:00:00 +0000 2021",
+              "conversation_id_str": "1700000000000000042",
+              "entities": {
+               "urls": [
+                {
+                 "url": "https://t.co/z1",
+                 "expanded_url": "https://example.net/zettel"
+                }
+               ]
+              }
+             }
+            }
+           }
+          }
+         }
+        },
+        {
+         "entryId": "conversationthread-3",
+         "sortIndex": "8",
+         "content": {
+          "entryType": "TimelineTimelineModule",
+          "items": [
+           {
+            "entryId": "conversationthread-3-tweet-1700000000000000044",
+            "item": {
+             "itemContent": {
+              "itemType": "TimelineTweet",
+              "tweet_results": {
+               "result": {
+                "__typename": "Tweet",
+                "rest_id": "1700000000000000044",
+                "core": {
+                 "user_results": {
+                  "result": {
+                   "__typename": "User",
+                   "core": {
+                    "screen_name": "zara",
+                    "name": "Zara"
+                   }
+                  }
+                 }
+                },
+                "legacy": {
+                 "full_text": "Template link in this reply https://t.co/z2",
+                 "created_at": "Fri Nov 12 08:05:00 +0000 2021",
+                 "conversation_id_str": "1700000000000000042",
+                 "entities": {
+                  "urls": [
+                   {
+                    "url": "https://t.co/z2",
+                    "expanded_url": "https://example.net/zettel-template"
+                   }
+                  ]
+                 },
+                 "in_reply_to_status_id_str": "1700000000000000042"
+                }
+               }
+              }
+             }
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     ]
+    }
+   }
+  }
+ ]
+}

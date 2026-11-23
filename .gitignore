@@ -1,0 +1,11 @@
+# Everything mirrored, including the X browser profile (holds your session cookies)
+data/
+.venv/
+__pycache__/
+*.pyc
+.python-version
+# Personal working notes (kept locally, not published)
+HANDOFF.md
+# Backups written next to config files, build output
+*.bak-bm-*
+dist/
