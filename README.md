@@ -92,6 +92,16 @@ Ids are `x:<tweet id>` and `hn:<item id>`. Every result carries `lists`: `bookma
 and/or `like` for X, `favorite` for HN. Add `--json` for machine-readable output.
 Until embeddings exist, search falls back to keyword mode and says so.
 
+For recent X bookmarks and likes, pass `--list bookmark` or `--list like` to
+`bm recent`. This follows X's list order, with imports missing an X rank placed
+after ranked items. `first_seen_at` and its legacy alias `saved_at` report when
+the local mirror first saw an item.
+
+Run `bm translate-setup` once to download the local English translation model
+(about 494 MB). Search, recent, and get then display X tweet text in English,
+including quotes and replies. Translation runs locally. The database, search
+index, and Markdown export continue to use the original text.
+
 ## Use it from LLM agents
 
 ### MCP server

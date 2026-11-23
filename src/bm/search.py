@@ -7,7 +7,7 @@ import re
 import sqlite3
 import sys
 
-from . import db
+from . import db, translate
 
 RRF_K = 60
 SNIPPET = 240
@@ -163,6 +163,12 @@ def result(conn, item_id: int, snippet: str, score: float) -> dict:
         # Title of the main linked page (not of other links, which would mislabel the post)
         lt = conn.execute("SELECT title FROM links WHERE url = ?", (row["link_url"],)).fetchone()
         title = lt["title"] if lt else None
+    snippet = snippet or row["text"]
+    if row["source"] == "x":
+        language = None
+        if snippet and snippet.strip(" …") in (row["text"] or ""):
+            language = translate.tweet_language(row["raw"])
+        title, snippet = translate.english(title), translate.english(snippet, language)
     return {
         "id": db.public_id(row),
         "source": row["source"],
@@ -171,7 +177,7 @@ def result(conn, item_id: int, snippet: str, score: float) -> dict:
         "author": row["author"],
         "created_at": row["created_at"],
         "title": title,
-        "snippet": _clip(snippet or row["text"]),
+        "snippet": _clip(snippet),
         "url": row["url"],
         "link_url": row["link_url"],
         "score": round(score, 4),

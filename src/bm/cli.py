@@ -241,6 +241,17 @@ def cmd_stats(a, conn):
     return 0
 
 
+def cmd_translate_setup(a, conn):
+    from . import translate
+
+    try:
+        translate.setup()
+    except Exception as e:
+        return _fail(f"could not download the translation model: {e}")
+    _log("English translation model is ready")
+    return 0
+
+
 def cmd_export(a, conn):
     from . import api
 
@@ -350,6 +361,9 @@ def parser() -> argparse.ArgumentParser:
     s.set_defaults(fn=cmd_links)
 
     sub.add_parser("embed", help="compute embeddings for semantic search").set_defaults(fn=cmd_embed)
+    sub.add_parser("translate-setup", help="download the local English translation model").set_defaults(
+        fn=cmd_translate_setup,
+    )
 
     s = sub.add_parser("search", help="search bookmarks")
     s.add_argument("query", nargs="+")

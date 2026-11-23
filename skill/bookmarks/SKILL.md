@@ -52,14 +52,15 @@ An empty or off-topic result does not prove the owner never saved it. Before say
 
 ## Posts in other languages
 
-Some saved posts are in Chinese, Japanese, Korean, Arabic, Russian and others. English
-queries find them when they link to an English page; otherwise search the key term in the
-post's language too. Snippets come back in the original language: translate what you
-quote or summarize, and say which language the post was in.
+When an English query misses a post, try the key term in the post's likely language.
+Present tweet text in English. Use the translations from `bm` or the MCP tool, and
+translate any original-language text returned by an older version before showing it.
+If a translation is unavailable, share the post link and say so.
 
-For "what did I save recently?" use `bm recent -n 20 --json` (newest first); for
-"what did I like recently?" add `--list like`. Each result's `lists` says whether it
-was bookmarked, liked or both.
+For recent X bookmarks use `recent_bookmarks(in_list="bookmark")` or
+`bm recent -n 20 --list bookmark --json`. Use `like` for X likes. Preserve the
+returned order. `first_seen_at` (legacy alias `saved_at`) is the local discovery
+time. Each result's `lists` shows its list membership.
 `bm stats` shows counts and when each source was last synced; mention it if the owner
 expects something that isn't there (it may not be synced yet).
 

@@ -7,14 +7,22 @@ import re
 import sqlite3
 from pathlib import Path
 
-from . import db
+from . import db, translate
 
 RECENT_ORDER = "first_seen_at DESC, CAST(bookmark_rank AS INTEGER) DESC, id DESC"
+SUMMARY_CHARS = 240
 
 
 def _summary(conn: sqlite3.Connection, row: sqlite3.Row) -> dict:
     meta = json.loads(row["meta"] or "{}")
-    text = re.sub(r"\s+", " ", row["text"] or "").strip()
+    text = row["text"]
+    title = row["title"] or meta.get("story_title")
+    if row["source"] == "x":
+        language = translate.tweet_language(row["raw"])
+        # Only translate the beginning of long posts for a short recent preview.
+        preview = text[: 2 * SUMMARY_CHARS] if text else text
+        text, title = translate.english(preview, language), translate.english(title)
+    text = re.sub(r"\s+", " ", text or "").strip()
     return {
         "id": db.public_id(row),
         "source": row["source"],
@@ -22,20 +30,36 @@ def _summary(conn: sqlite3.Connection, row: sqlite3.Row) -> dict:
         "kind": row["kind"],
         "author": row["author"],
         "created_at": row["created_at"],
+        "first_seen_at": row["first_seen_at"],
         "saved_at": row["first_seen_at"],
-        "title": row["title"] or meta.get("story_title"),
-        "text": text[:240] + ("…" if len(text) > 240 else ""),
+        "title": title,
+        "text": text[:SUMMARY_CHARS] + ("…" if len(text) > SUMMARY_CHARS else ""),
         "url": row["url"],
         "link_url": row["link_url"],
     }
 
 
-def get_item(conn: sqlite3.Connection, ref: str, max_chars: int = 4000) -> dict | None:
+def get_item(
+    conn: sqlite3.Connection, ref: str, max_chars: int = 4000, *, translate_tweet: bool = True
+) -> dict | None:
     """Full item plus its linked pages; `max_chars` caps the linked page text in total."""
     row = db.find_item(conn, ref.strip())
     if row is None:
         return None
     meta = json.loads(row["meta"] or "{}")
+    title = row["title"] or meta.get("story_title")
+    text = row["text"]
+    if translate_tweet and row["source"] == "x":
+        language = translate.tweet_language(row["raw"])
+        title, text = translate.english(title), translate.english(text, language)
+        for post in [meta.get("quoted"), *(meta.get("thread") or [])]:
+            if post and post.get("text"):
+                post["text"] = translate.english(post["text"])
+        article = meta.get("article")
+        if article:
+            for field in ("title", "preview_text"):
+                if article.get(field):
+                    article[field] = translate.english(article[field])
     links, budget = [], max_chars
     for lr in conn.execute(
         "SELECT l.* FROM links l JOIN item_links il ON il.link_id = l.id "
@@ -65,10 +89,11 @@ def get_item(conn: sqlite3.Connection, ref: str, max_chars: int = 4000) -> dict 
         "author": row["author"],
         "author_name": row["author_name"],
         "created_at": row["created_at"],
+        "first_seen_at": row["first_seen_at"],
         "saved_at": row["first_seen_at"],
         "last_seen_at": row["last_seen_at"],
-        "title": row["title"] or meta.get("story_title"),
-        "text": row["text"],
+        "title": title,
+        "text": text,
         "url": row["url"],
         "link_url": row["link_url"],
         "meta": meta,
@@ -79,16 +104,16 @@ def get_item(conn: sqlite3.Connection, ref: str, max_chars: int = 4000) -> dict 
 def recent(
     conn: sqlite3.Connection, n: int = 20, source: str | None = None, in_list: str | None = None
 ) -> list[dict]:
-    """Most recently saved first. With `in_list`, in that list's own order
-    (e.g. most recently liked first for 'like')."""
+    """Use X's rank for a specific X list, then local discovery time."""
     if in_list:
         where, args = "WHERE l.list = ?", [in_list]
         if source:
             where += " AND i.source = ?"
             args.append(source)
+        rank = "CAST(l.rank AS INTEGER) DESC, " if in_list in ("bookmark", "like") else ""
         rows = conn.execute(
             f"SELECT i.* FROM items i JOIN item_lists l ON l.item_id = i.id {where} "
-            "ORDER BY l.first_seen_at DESC, CAST(l.rank AS INTEGER) DESC, i.id DESC LIMIT ?",
+            f"ORDER BY {rank}l.first_seen_at DESC, i.id DESC LIMIT ?",
             (*args, n),
         ).fetchall()
     else:
@@ -188,7 +213,7 @@ def export_md(conn: sqlite3.Connection, outdir: str, max_chars: int = 20000) -> 
     out.mkdir(parents=True, exist_ok=True)
     n = 0
     for (ref,) in conn.execute(f"SELECT source || ':' || source_id FROM items ORDER BY {RECENT_ORDER}"):
-        item = get_item(conn, ref, max_chars=max_chars)
+        item = get_item(conn, ref, max_chars=max_chars, translate_tweet=False)
         (out / f"{ref.replace(':', '-')}.md").write_text(to_markdown(item), encoding="utf-8")
         n += 1
     return n
