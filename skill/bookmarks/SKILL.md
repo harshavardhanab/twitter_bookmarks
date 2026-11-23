@@ -33,6 +33,30 @@ If the `bookmarks` MCP server is connected, its tools (`search_bookmarks`,
 4. Answer from what you read and **cite the URLs**: the post's `url` and the
    article's `link_url` when the content came from the linked page.
 
+## When results are weak or empty
+
+An empty or off-topic result does not prove the owner never saved it. Before saying so:
+
+- **Check `mode` and `note`** in the JSON. `"mode": "keyword"` with a `note` means
+  semantic search was unavailable (no embeddings, a model change awaiting `bm embed`, or
+  a model load failure), so paraphrases and other-language posts were not searched.
+  Say that in your answer.
+- **Retry in semantic mode** with a plain-language description of the idea
+  (`--mode semantic`), and in keyword mode with one or two distinctive words
+  (a name, product, library, number).
+- **Drop the filters** (`--author`, dates, `--list`) if a filtered search is empty: the
+  owner may remember them wrong.
+- **Try the original language** when there's a hint (a Chinese author, a Japanese
+  product, "a thread in Spanish"): search the key term in that language too.
+  Chinese, Japanese and Korean terms work in keyword mode.
+
+## Posts in other languages
+
+Some saved posts are in Chinese, Japanese, Korean, Arabic, Russian and others. English
+queries find them when they link to an English page; otherwise search the key term in the
+post's language too. Snippets come back in the original language: translate what you
+quote or summarize, and say which language the post was in.
+
 For "what did I save recently?" use `bm recent -n 20 --json` (newest first); for
 "what did I like recently?" add `--list like`. Each result's `lists` says whether it
 was bookmarked, liked or both.
@@ -46,6 +70,7 @@ expects something that isn't there (it may not be synced yet).
   their `t.co` links may be unexpanded. Say so if the author matters; the `url` still
   opens the tweet.
 - A result's `snippet` is only an excerpt. Use `bm get` before quoting or summarizing.
-- If search reports "keyword only", embeddings are missing. `bm embed` builds them,
-  but ask before running a sync or embed: they change the owner's data and can take a while.
+- If search reports "keyword only", embeddings are missing or out of date. `bm embed`
+  builds them, but ask before running a sync or embed: they change the owner's data and
+  can take a while (a full rebuild of several thousand posts takes 10+ minutes).
 - Don't run `bm x login`. The owner signs in to X themselves.

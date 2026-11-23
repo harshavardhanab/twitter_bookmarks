@@ -8,7 +8,9 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sqlite3
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -82,6 +84,50 @@ CREATE TABLE IF NOT EXISTS item_embed (item_id INTEGER PRIMARY KEY, hash TEXT NO
 """
 
 
+# Scripts written without spaces between words: Han, kana, Hangul. FTS5's unicode61
+# tokenizer would make a whole run of them one token, so the index stores them one
+# character per token (split by zero-width spaces, which it treats as separators) and
+# queries match them as phrases.
+CJK = (
+    "\u1100-\u11ff\u3040-\u30ff\u3130-\u318f\u3400-\u4dbf\u4e00-\u9fff"
+    "\uac00-\ud7af\uf900-\ufaff\uff66-\uff9f\U00020000-\U0002fa1f"
+)
+CJK_RE = re.compile(f"[{CJK}]")
+_CJK_EDGE = re.compile(f"(?<=[{CJK}])(?=\\w)|(?<=\\w)(?=[{CJK}])")
+ZWSP = "\u200b"
+# Bump when the FTS document format changes; connect() then rebuilds the index once.
+FTS_VERSION = "2"
+
+
+def cjk_split(text: str) -> str:
+    """Separate every CJK character from its neighbours with a zero-width space."""
+    return _CJK_EDGE.sub(ZWSP, text) if text and CJK_RE.search(text) else text
+
+
+def cjk_join(text: str) -> str:
+    return text.replace(ZWSP, "") if text else text
+
+
+# arXiv abstract pages: everything after the abstract is site chrome
+# ("Connected Papers (What is Connected Papers?)", submission history, arXivLabs...)
+_ARXIV_TAIL = re.compile(
+    r"\n\s*(Submission history|Additional Features|References & Citations|"
+    r"Bibliographic and Citation Tools)\b"
+)
+
+
+def clean_page_text(text: str | None) -> str | None:
+    """Strip known boilerplate from extracted page text (used at fetch and index time)."""
+    if not text:
+        return text
+    if "arXivLabs" in text and "Bibliographic" in text:
+        m = _ARXIV_TAIL.search(text)
+        if m:
+            text = text[: m.start()]
+        text = re.sub(r"(?m)^\s*View PDF( HTML \(experimental\))?\s*$\n?", "", text)
+    return text.strip()
+
+
 def home() -> Path:
     """Data directory.
 
@@ -120,7 +166,19 @@ def connect() -> sqlite3.Connection:
         "WHERE NOT EXISTS (SELECT 1 FROM item_lists l WHERE l.item_id = items.id)"
     )
     conn.commit()
+    if get_setting(conn, "fts_version") != FTS_VERSION:
+        rebuild_fts(conn)
     return conn
+
+
+def rebuild_fts(conn: sqlite3.Connection) -> None:
+    """Re-index every item (after FTS_VERSION changes). Takes a few seconds per 1,000 items."""
+    ids = [r[0] for r in conn.execute("SELECT id FROM items")]
+    if ids:
+        print(f"bm: rebuilding the keyword index ({len(ids)} items)...", file=sys.stderr)
+    for item_id in ids:
+        refresh_fts(conn, item_id)
+    set_setting(conn, "fts_version", FTS_VERSION)  # commits
 
 
 def get_setting(conn: sqlite3.Connection, key: str, default: str | None = None) -> str | None:
@@ -230,7 +288,8 @@ def item_document(conn: sqlite3.Connection, item_id: int) -> dict:
         (item_id,),
     ).fetchall()
     links = "\n\n".join(
-        "\n".join(filter(None, [lr["title"], lr["final_url"] or lr["url"], lr["content"]]))
+        "\n".join(filter(None, [lr["title"], lr["final_url"] or lr["url"],
+                               clean_page_text(lr["content"])]))
         for lr in link_rows
     )
     author = " ".join(filter(None, [row["author"], row["author_name"]]))
@@ -242,7 +301,7 @@ def refresh_fts(conn: sqlite3.Connection, item_id: int) -> None:
     conn.execute("DELETE FROM items_fts WHERE rowid = ?", (item_id,))
     conn.execute(
         "INSERT INTO items_fts (rowid, title, text, author, links) VALUES (?, ?, ?, ?, ?)",
-        (item_id, doc["title"], doc["text"], doc["author"], doc["links"]),
+        (item_id, *(cjk_split(doc[k]) for k in ("title", "text", "author", "links"))),
     )
 
 

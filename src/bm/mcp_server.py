@@ -22,7 +22,11 @@ mcp = FastMCP(
         "Searches the owner's saved X (Twitter) bookmarks and likes and Hacker News favorites, "
         "including the text of the pages they link to. Use search_bookmarks when the owner "
         "asks about something they saved, bookmarked, favorited or read; try two or three "
-        "phrasings, then get_bookmark for detail. Cite the url (and link_url) of what you use."
+        "phrasings, then get_bookmark for detail. Cite the url (and link_url) of what you use. "
+        "An empty result is not proof: check the returned mode and note (keyword-only means "
+        "semantic search was unavailable), retry with mode='semantic', fewer and more distinctive "
+        "words, no filters, and the key term in the post's likely original language. Posts may "
+        "be in other languages; translate what you quote."
     ),
 )
 
@@ -51,7 +55,10 @@ def search_bookmarks(
         mode: "hybrid" (default), "keyword" or "semantic".
 
     Returns {"mode", "results": [{id, source, lists, kind, author, created_at, title, snippet,
-    url, link_url, score}]}. Pass a result's id to get_bookmark for the full text.
+    url, link_url, score}], "note"?}. "mode" is the mode actually used: "keyword" with a
+    "note" means semantic search was unavailable, so an empty result is inconclusive.
+    Snippets are in the post's own language. Pass a result's id to get_bookmark for the
+    full text.
     """
     conn = db.connect()
     try:

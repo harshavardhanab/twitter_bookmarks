@@ -14,12 +14,37 @@ SNIPPET = 240
 TOKEN_RE = re.compile(r"\w+", re.UNICODE)
 
 
+# Ignored when measuring how many query terms a post matches (they still match)
+STOPWORDS = frozenset(
+    "a an and are as at be by did do does for from how i in is it me my of on or that the "
+    "this to was what when where which who why with you your about saved save bookmarked "
+    "liked".split()
+)
+
+
+def _term(token: str) -> str:
+    """One query word as an FTS5 string; CJK runs become a phrase of single characters."""
+    if db.CJK_RE.search(token):
+        token = db.cjk_split(token).replace(db.ZWSP, " ")
+    return f'"{token}"'
+
+
+def terms(q: str) -> list[str]:
+    """Distinct query words as quoted FTS5 strings, in order."""
+    out: list[str] = []
+    for t in TOKEN_RE.findall(q):
+        term = _term(t)
+        if term not in out:
+            out.append(term)
+    return out
+
+
 def fts_query(q: str, raw: bool = False) -> str | None:
-    """Free text to an FTS5 query: quoted tokens joined by OR (raw passes it through)."""
+    """Free text to an FTS5 query: quoted terms joined by OR (raw passes it through)."""
     if raw:
-        return q.strip() or None
-    tokens = TOKEN_RE.findall(q)
-    return " OR ".join(f'"{t}"' for t in tokens) or None
+        q = db.cjk_split(q.strip()).replace(db.ZWSP, " ")
+        return q or None
+    return " OR ".join(terms(q)) or None
 
 
 def _filters(source=None, since=None, until=None, author=None, in_list=None) -> tuple[str, list]:
@@ -49,46 +74,85 @@ def _clip(s: str | None, n: int = SNIPPET) -> str:
     return s if len(s) <= n else s[: n - 1].rstrip() + "…"
 
 
-def keyword(conn, q, n=50, raw=False, **filters) -> list[tuple[int, str]]:
-    """[(item id, snippet)] best first."""
+def _match_ids(conn, query: str, ids: list[int]) -> set[int]:
+    marks = ",".join("?" * len(ids))
+    return {r[0] for r in conn.execute(
+        f"SELECT rowid FROM items_fts WHERE items_fts MATCH ? AND rowid IN ({marks})",
+        (query, *ids))}
+
+
+def keyword(conn, q, n=50, raw=False, **filters) -> list[tuple[int, str, float]]:
+    """[(item id, snippet, weight)] best first.
+
+    Free-text queries are ranked by: exact phrase match, then the share of the query's
+    words the post contains (stopwords aside), then bm25. `weight` is that share (1.0 for
+    a phrase or full match) and scales the keyword vote in hybrid ranking, so a post that
+    shares one word with the query counts for little.
+    """
     query = fts_query(q, raw)
     if not query:
         return []
     where, args = _filters(**filters)
-    rows = conn.execute(
+    sql = (
         "SELECT f.rowid AS id, snippet(items_fts, -1, '', '', '…', 40) AS snip "
         "FROM items_fts f JOIN items i ON i.id = f.rowid "
         f"WHERE items_fts MATCH ?{where} "
-        "ORDER BY bm25(items_fts, 5, 3, 2, 1) LIMIT ?",
-        (query, *args, n),
-    ).fetchall()
-    return [(r["id"], r["snip"]) for r in rows]
+        "ORDER BY bm25(items_fts, 5, 3, 2, 1) LIMIT ?"
+    )
+    ts = [] if raw else terms(q)
+    if len(ts) < 2:
+        rows = conn.execute(sql, (query, *args, n)).fetchall()
+        return [(r["id"], db.cjk_join(r["snip"]), 1.0) for r in rows]
+
+    # Candidates: posts with every word (so none are cut off by the OR list), then the OR list
+    cand: dict[int, tuple[int, str]] = {}  # id -> (bm25 order, snippet)
+    for qq, lim in ((" AND ".join(ts), n), (query, n * 3)):
+        for r in conn.execute(sql, (qq, *args, lim)).fetchall():
+            cand.setdefault(r["id"], (len(cand), r["snip"]))
+    ids = list(cand)
+    if not ids:
+        return []
+    content = [t for t in ts if t.strip('"').lower() not in STOPWORDS] or ts
+    hits = {t: _match_ids(conn, t, ids) for t in content}
+    phrase = _match_ids(conn, '"' + " ".join(t.strip('"') for t in ts) + '"', ids)
+
+    def weight(i: int) -> float:
+        return 1.0 if i in phrase else sum(i in hits[t] for t in content) / len(content)
+
+    ranked = sorted(ids, key=lambda i: (i not in phrase, -weight(i), cand[i][0]))
+    return [(i, db.cjk_join(cand[i][1]), weight(i)) for i in ranked[:n]]
 
 
 def semantic(conn, q, n=50, **filters) -> list[tuple[int, str]]:
-    """[(item id, best chunk text)] nearest first. Needs vectors (bm embed)."""
+    """[(item id, best chunk text)] nearest first. Needs vectors (bm embed).
+
+    With filters, distances are computed over the matching posts' chunks only, so a
+    filter can never empty the result by cutting the nearest-neighbour list short.
+    """
     from . import embed
 
     embed.load_vec(conn)
-    filtered = any(filters.values())
-    k = n * 8 if filtered else n * 3  # several chunks per item; filters drop some
-    rows = conn.execute(
-        "SELECT v.rowid AS cid, v.distance, c.item_id, c.text FROM vec_chunks v "
-        "JOIN chunks c ON c.id = v.rowid WHERE v.embedding MATCH ? AND k = ? "
-        "ORDER BY v.distance",
-        (embed.query_vector(q), min(k, 4096)),
-    ).fetchall()
+    qv = embed.query_vector(q)
+    if any(filters.values()):
+        where, args = _filters(**filters)
+        rows = conn.execute(
+            "SELECT c.item_id, c.text, vec_distance_l2(v.embedding, ?) AS distance "
+            "FROM chunks c JOIN vec_chunks v ON v.rowid = c.id "
+            f"WHERE c.item_id IN (SELECT i.id FROM items i WHERE 1 = 1{where}) "
+            "ORDER BY distance LIMIT ?",
+            (qv, *args, n * 8),
+        ).fetchall()
+    else:
+        rows = conn.execute(
+            "SELECT c.item_id, c.text, v.distance FROM vec_chunks v "
+            "JOIN chunks c ON c.id = v.rowid WHERE v.embedding MATCH ? AND k = ? "
+            "ORDER BY v.distance",
+            (qv, min(n * 4, 4096)),
+        ).fetchall()
     best: dict[int, str] = {}
     for r in rows:
         best.setdefault(r["item_id"], r["text"])
-    ids = list(best)
-    if filtered and ids:
-        where, args = _filters(**filters)
-        marks = ",".join("?" * len(ids))
-        keep = {r[0] for r in conn.execute(
-            f"SELECT i.id FROM items i WHERE i.id IN ({marks}){where}", (*ids, *args))}
-        ids = [i for i in ids if i in keep]
-    return [(i, best[i]) for i in ids[:n]]
+    return list(best.items())[:n]
 
 
 def result(conn, item_id: int, snippet: str, score: float) -> dict:
@@ -139,8 +203,9 @@ def search(
 
         try:
             embed.load_vec(conn)
-            if not embed.has_vectors(conn):
-                raise RuntimeError("no embeddings yet (run: bm embed)")
+            problem = embed.not_ready(conn)
+            if problem:
+                raise RuntimeError(problem)
             sem = semantic(conn, q, depth, **filters)
         except Exception as e:  # missing model, no network, sqlite-vec unavailable
             note = f"semantic search unavailable, keyword only: {e}"
@@ -157,14 +222,14 @@ def search(
         raise ValueError(f"bad FTS query: {e}") from e
 
     if mode == "keyword":
-        ranked = [(i, s, 1.0 / (RRF_K + r)) for r, (i, s) in enumerate(kw, 1)]
+        ranked = [(i, s, 1.0 / (RRF_K + r)) for r, (i, s, _) in enumerate(kw, 1)]
     elif mode == "semantic":
         ranked = [(i, s, 1.0 / (RRF_K + r)) for r, (i, s) in enumerate(sem or [], 1)]
     else:
         scores: dict[int, float] = {}
         snips: dict[int, str] = {}
-        for r, (i, s) in enumerate(kw, 1):
-            scores[i] = scores.get(i, 0) + 1.0 / (RRF_K + r)
+        for r, (i, s, w) in enumerate(kw, 1):
+            scores[i] = scores.get(i, 0) + w / (RRF_K + r)
             snips[i] = s  # keyword snippet shows the matching words
         for r, (i, s) in enumerate(sem or [], 1):
             scores[i] = scores.get(i, 0) + 1.0 / (RRF_K + r)

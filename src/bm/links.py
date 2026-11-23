@@ -154,6 +154,7 @@ def _fetch_once(http: httpx.Client, url: str) -> dict:
         else:
             return res  # other types: recorded, not extracted
         res["title"] = title
+        text = db.clean_page_text(text)
         res["content"] = text[:MAX_CHARS] if text else None
     except httpx.HTTPError as e:
         res["error"] = f"{type(e).__name__}: {e}"[:300] or type(e).__name__

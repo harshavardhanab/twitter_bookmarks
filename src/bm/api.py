@@ -42,7 +42,7 @@ def get_item(conn: sqlite3.Connection, ref: str, max_chars: int = 4000) -> dict 
         "WHERE il.item_id = ? ORDER BY l.id",
         (row["id"],),
     ):
-        content = lr["content"] or ""
+        content = db.clean_page_text(lr["content"]) or ""
         take = content[: max(budget, 0)]
         budget -= len(take)
         links.append({

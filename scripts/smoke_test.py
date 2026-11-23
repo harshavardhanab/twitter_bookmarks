@@ -97,6 +97,67 @@ async def mcp_list_checks() -> None:
         check("mcp recent in_list=like", got == ["x:1900000000000000007", "x:1800000000000000001"], str(got))
 
 
+def ranking_checks(home: Path) -> None:
+    """Search quality on a separate throwaway database (so the fixture counts stay put)."""
+    from bm import db, embed, search
+
+    old_home = os.environ["BM_HOME"]
+    rank_home = home / "ranking"
+    rank_home.mkdir()
+    if (home / "models").exists():
+        (rank_home / "models").symlink_to((home / "models").resolve())
+    os.environ["BM_HOME"] = str(rank_home)
+    try:
+        conn = db.connect()
+        posts = {
+            "jp": ("taro", "勾配クリッピングはニューラルネットワークの学習を安定させる。"),
+            "zh": ("li", "用证书透明度日志可以发现别人刚注册的新域名。"),
+            "notebook": ("ann", "Notebook: pick a colour gradient for your matplotlib charts. Gradient presets included."),
+            "clip": ("cara", "Gradient clipping explained: clip the norm before the optimizer step."),
+            "solo": ("solo", "My grandmother's tomato soup recipe, slow-cooked with basil."),
+        }
+        posts |= {f"pg{i}": ("dba", f"Postgres tip {i}: index bloat, vacuum and database indexing.") for i in range(20)}
+        for k, (author, text) in posts.items():
+            db.upsert_item(conn, {"source": "x", "source_id": k, "kind": "tweet", "url": f"https://x.com/{author}/status/{k}",
+                                  "text": text, "author": author, "created_at": "2026-01-01T00:00:00Z", "list": "bookmark"})
+        conn.commit()
+
+        def got(out):
+            return [r["id"] for r in out["results"]]
+
+        out = search.search(conn, "クリッピング", mode="keyword")
+        check("CJK word inside a sentence (keyword)", got(out) == ["x:jp"], str(got(out)))
+        out = search.search(conn, "域名", mode="keyword")
+        check("Chinese two-character word (keyword)", got(out) == ["x:zh"], str(got(out)))
+        check("CJK snippet has no split marks", db.ZWSP not in out["results"][0]["snippet"])
+        kw = search.keyword(conn, "gradient clipping")
+        check("all-words match outranks a repeated single word", [i for i, _, _ in kw][:1] == [db.find_item(conn, "x:clip")["id"]]
+              and kw[-1][2] == 0.5, str(kw))
+
+        embed.embed_all(conn, log=lambda *_: None)
+        sem = search.semantic(conn, "postgres database indexing", n=1, author="solo")
+        check("filters apply before the nearest-neighbour cutoff", [i for i, _ in sem] == [db.find_item(conn, "x:solo")["id"]], str(sem))
+
+        db.set_setting(conn, "embed_model", "some/other-model")
+        out = search.search(conn, "soup", mode="hybrid")
+        check("vectors from another model: keyword only, with a note", out["mode"] == "keyword" and "bm embed" in out.get("note", ""), str(out)[:200])
+        db.set_setting(conn, "embed_model", embed.MODEL)
+
+        table = "Results below.\n" + "| model | 26.67 | 30.30 | 67.50 |\n" * 120
+        check("table-only chunks are dropped (first chunk kept)", len(embed.chunk(table)) == 1)
+        page = "Title:Foo\nView PDF HTML (experimental)\nAbstract: we do X.\nSubmission history\n[v1] ...\nBibliographic and Citation Tools\narXivLabs: ..."
+        check("arXiv page chrome stripped", db.clean_page_text(page) == "Title:Foo\nAbstract: we do X.")
+
+        db.set_setting(conn, "fts_version", "0")
+        conn.close()
+        conn = db.connect()
+        check("keyword index rebuilt after a format change", db.get_setting(conn, "fts_version") == db.FTS_VERSION
+              and search.search(conn, "クリッピング", mode="keyword")["results"])
+        conn.close()
+    finally:
+        os.environ["BM_HOME"] = old_home
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--network", action="store_true", help="also fetch linked pages")
@@ -177,6 +238,9 @@ def main() -> int:
         out = js("search", "what's \"FTS5\" (ranking)?", "--json", "--mode", "keyword")
         check("punctuation-safe query", bool(out["results"]))
         check("human output", "1. [x: bookmark]" in bm("search", "sqlite").stdout)
+
+        print("search ranking and languages")
+        ranking_checks(home)
 
         print("recent / stats / export / config")
         rec = js("recent", "-n", "3", "--json")
