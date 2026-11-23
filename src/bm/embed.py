@@ -12,7 +12,7 @@ from . import db
 # Changing MODEL makes the next `bm embed` rebuild every vector; until it finishes,
 # search runs keyword-only rather than compare vectors from two different models.
 # QUERY_PREFIX / DOC_PREFIX are the instructions some models expect (e5: "query: ").
-MODEL = "BAAI/bge-small-en-v1.5"
+MODEL = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 QUERY_PREFIX = ""
 DOC_PREFIX = ""
 LEGACY_MODEL = "BAAI/bge-small-en-v1.5"  # what databases without an embed_model setting hold
@@ -148,10 +148,12 @@ def embed_all(conn: sqlite3.Connection, log: Callable[[str], None] = print) -> d
     """
     load_vec(conn)
     if stored_model(conn) != MODEL and has_vectors(conn):
+        model()  # load the replacement before clearing the existing index
         log(f"embed: model changed ({stored_model(conn)} -> {MODEL}); rebuilding all vectors")
         conn.execute("DELETE FROM vec_chunks")
         conn.execute("DELETE FROM chunks")
         conn.execute("DELETE FROM item_embed")
+        conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('embed_rebuilding', '1')")
         db.set_setting(conn, "embed_model", MODEL)  # commits
     known = dict(conn.execute("SELECT item_id, hash FROM item_embed").fetchall())
     todo = []  # (item_id, hash, chunks)
@@ -162,6 +164,7 @@ def embed_all(conn: sqlite3.Connection, log: Callable[[str], None] = print) -> d
             todo.append((item_id, h, chunk(doc)))
     stats = {"items": len(todo), "chunks": sum(len(c) for _, _, c in todo)}
     if not todo:
+        conn.execute("DELETE FROM settings WHERE key = 'embed_rebuilding'")
         db.set_setting(conn, "embed_model", MODEL)
         log("embed: up to date")
         return stats
@@ -197,6 +200,7 @@ def embed_all(conn: sqlite3.Connection, log: Callable[[str], None] = print) -> d
         done += len(group)
         if len(todo) > BATCH:
             log(f"  {done}/{len(todo)}")
+    conn.execute("DELETE FROM settings WHERE key = 'embed_rebuilding'")
     db.set_setting(conn, "embed_model", MODEL)
     log(f"embed: {stats['items']} items embedded")
     return stats
@@ -218,6 +222,9 @@ def not_ready(conn: sqlite3.Connection) -> str | None:
     """Why semantic search can't run right now, or None if it can."""
     if not has_vectors(conn):
         return "no embeddings yet (run: bm embed)"
-    if stored_model(conn) != MODEL:
-        return f"embeddings were built with {stored_model(conn)}, not {MODEL} (run: bm embed)"
+    indexed_model = stored_model(conn)
+    if indexed_model != MODEL:
+        return f"embeddings were built with {indexed_model}, not {MODEL} (run: bm embed)"
+    if db.get_setting(conn, "embed_rebuilding"):
+        return "embeddings are being rebuilt (run: bm embed to resume if interrupted)"
     return None

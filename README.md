@@ -9,9 +9,10 @@
 - The **author's own replies** to a saved tweet. That's often where the actual link
   or the rest of a 🧵 lives.
 
-Search is **hybrid**: SQLite FTS5 keyword ranking fused with local embeddings
-(`BAAI/bge-small-en-v1.5` via [fastembed](https://github.com/qdrant/fastembed), stored
-with [sqlite-vec](https://github.com/asg017/sqlite-vec)). Everything runs on your
+Search is **hybrid**: SQLite FTS5 keyword ranking fused with local multilingual
+embeddings (`sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2` via
+[fastembed](https://github.com/qdrant/fastembed), stored with
+[sqlite-vec](https://github.com/asg017/sqlite-vec)). Everything runs on your
 machine. No API keys are needed, and nothing leaves your computer except requests to
 X, HN and the linked sites.
 
@@ -34,7 +35,7 @@ Any LLM agent can use it through:
   it is untested.
 - [**uv**](https://docs.astral.sh/uv/) (it installs Python 3.12 or 3.13 for you).
 - **Google Chrome**, for X capture.
-- About 70 MB for the embedding model, downloaded on first use.
+- About 250 MB for the embedding model and tokenizer, downloaded on first use.
 
 ## Install
 
@@ -90,7 +91,9 @@ bm stats                                         # counts, link status, last syn
 
 Ids are `x:<tweet id>` and `hn:<item id>`. Every result carries `lists`: `bookmark`
 and/or `like` for X, `favorite` for HN. Add `--json` for machine-readable output.
-Until embeddings exist, search falls back to keyword mode and says so.
+Search reports keyword mode until the embedding index is ready.
+English semantic queries can find posts in other languages. Keyword search also
+matches Chinese, Japanese and Korean terms within sentences.
 
 For recent X bookmarks and likes, pass `--list bookmark` or `--list like` to
 `bm recent`. This follows X's list order, with imports missing an X rank placed
@@ -227,7 +230,7 @@ X web app ──(your Chrome session, Playwright)──► raw GraphQL JSON ─�
 HN favorites pages + Firebase/Algolia APIs ────────────────────────┼─► SQLite items + lists
 linked pages (httpx → trafilatura / pypdf) ────────────────────────┘        │
                                                                              ├─ FTS5 (bm25)
-                                                                             └─ sqlite-vec (bge-small chunks)
+                                                                             └─ sqlite-vec (multilingual MiniLM chunks)
                                        CLI / MCP / Skill ◄── hybrid search (reciprocal rank fusion)
 ```
 

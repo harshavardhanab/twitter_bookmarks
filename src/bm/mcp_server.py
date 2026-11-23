@@ -23,6 +23,7 @@ mcp = FastMCP(
         "including the text of the pages they link to. Use search_bookmarks when the owner "
         "asks about something they saved, bookmarked, favorited or read; try two or three "
         "phrasings, then get_bookmark for detail. Cite the url (and link_url) of what you use. "
+        "Semantic search is multilingual, so English queries can find posts written in other languages. "
         "An empty result is not proof: check the returned mode and note (keyword-only means "
         "semantic search was unavailable), retry with mode='semantic', fewer and more distinctive "
         "words, no filters, and the key term in the post's likely original language. "
@@ -58,6 +59,7 @@ def search_bookmarks(
     Returns {"mode", "results": [{id, source, lists, kind, author, created_at, title, snippet,
     url, link_url, score}], "note"?}. "mode" is the mode actually used: "keyword" with a
     "note" means semantic search was unavailable, so an empty result is inconclusive.
+    English queries can find posts written in other languages through semantic search.
     X snippets are translated into English for display. Pass a result's id to
     get_bookmark for the full text.
     """

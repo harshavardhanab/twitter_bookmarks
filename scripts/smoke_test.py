@@ -135,6 +135,14 @@ def ranking_checks(home: Path) -> None:
               and kw[-1][2] == 0.5, str(kw))
 
         embed.embed_all(conn, log=lambda *_: None)
+        out = search.search(conn, "gradient clipping neural network training", mode="semantic")
+        ranked = got(out)
+        check("English semantic query ranks the Japanese post above the notebook",
+              "x:jp" in ranked and "x:notebook" in ranked and ranked.index("x:jp") < ranked.index("x:notebook"),
+              str(ranked))
+        out = search.search(conn, "finding newly registered domains in certificate transparency logs",
+                            mode="semantic", limit=3)
+        check("English semantic query finds the Chinese post", "x:zh" in got(out), str(got(out)))
         sem = search.semantic(conn, "postgres database indexing", n=1, author="solo")
         check("filters apply before the nearest-neighbour cutoff", [i for i, _ in sem] == [db.find_item(conn, "x:solo")["id"]], str(sem))
 

@@ -52,6 +52,8 @@ An empty or off-topic result does not prove the owner never saved it. Before say
 
 ## Posts in other languages
 
+Semantic search is multilingual. English queries can find posts written in other
+languages, including Chinese, Japanese and Korean.
 When an English query misses a post, try the key term in the post's likely language.
 Present tweet text in English. Use the translations from `bm` or the MCP tool, and
 translate any original-language text returned by an older version before showing it.
