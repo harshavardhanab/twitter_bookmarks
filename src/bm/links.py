@@ -19,6 +19,10 @@ from typing import Callable
 import httpx
 
 warnings.filterwarnings("ignore", message=".*SOCKS support in urllib3.*")
+# pypdf logs a long warning per PDF font it can't fully decode; text extraction still works
+import logging  # noqa: E402
+
+logging.getLogger("pypdf").setLevel(logging.ERROR)
 import trafilatura  # noqa: E402
 
 from . import db  # noqa: E402
